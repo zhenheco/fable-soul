@@ -22,6 +22,7 @@ SKILL_ROOT = Path(__file__).resolve().parents[1]
 
 TRACKED = [
     "SKILL.md",
+    "CHANGELOG.md",
     "references/soul.md",
     "references/maintenance.md",
     "references/transfer-prompts.md",
