@@ -35,6 +35,7 @@ fable-soul/
 │   └── transfer-prompts.md         # 6 個把經驗轉成 skill 的 prompt 模板
 └── scripts/
     ├── sync_soul.py                # 同步規則到所有安裝位置、偵測 drift
+    ├── check_update.py             # 比對本地檔案與上游 repo 是否有更新
     └── validate_skill.py           # Skill 套件結構驗證
 ```
 
@@ -109,6 +110,7 @@ fable-soul/
 
 - `sync_soul.py` — 把 skill 複製到 `~/.claude/skills/` 和 `~/.codex/skills/`，並從 canonical 重新生成全域指令檔（`~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md`）。加 `--check` 只回報 drift、不做任何變更——可以接進 CI 或 shell alias。
 - **安全保護**：腳本**不會覆寫**不是它產生的全域檔案。你已有自己的 `CLAUDE.md` 的話，會收到跳過警告，不會被蓋掉。
+- `check_update.py` — 比對你的本地副本與本 repo 的 `main` 分支，列出哪些檔案上游有更新。唯讀，永遠不會修改任何東西。首次使用時，skill 會主動問你要不要建立**每週自動更新檢查**（透過 cron、工作排程器、或你的 runner 的排程功能）——只有你說好才會建立。
 - `validate_skill.py` — 檢查 frontmatter、引用連結、套件結構。
 
 ## 安裝
@@ -135,6 +137,8 @@ python scripts/sync_soul.py --check  # 驗證全部同步
 這會讓規則透過全域指令檔在**每個** session 載入。如果你已經有自己的 `CLAUDE.md` / `AGENTS.md`，腳本會跳過它——請手動把 `references/soul.md` 的本體（從 `**Violating the letter...**` 那一行起）貼進你現有的檔案。
 
 **其他 runner。** 任何會讀 Markdown 指令的 agent 都能用：讓它讀 `references/soul.md`，或把本體貼進你的 runner 的全域指令機制。
+
+**保持更新。** 隨時可跑 `python scripts/check_update.py` 查看上游是否有變更，或在首次使用時接受 skill 提議的每週自動檢查。
 
 ## 長出你自己的規則 — 捕捉迴圈
 

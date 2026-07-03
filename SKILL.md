@@ -25,6 +25,8 @@ When the task is ordinary work and this skill was loaded for judgment: read [sou
 
 **Audit / slim the rules**: use the Instruction Audit prompt in [transfer-prompts.md](references/transfer-prompts.md). Rules earn their place by changing a future action or verification step; strip ceremony.
 
+**Check for upstream updates**: run `python scripts/check_update.py` from the skill root. It compares local files against the upstream GitHub repo and reports which files differ; it never modifies anything. The first time this skill is used in an environment that supports scheduled tasks (cron, Task Scheduler, or the runner's own scheduling feature), ASK the user whether they want a weekly automatic update check that runs this script and reports the result. Create the schedule only if the user says yes — never install a scheduled task silently.
+
 ## Mode 3: Transfer
 
 When the user wants to move judgment into new durable form — a stronger model's advice, a Reddit post, session lessons, a project handover — use the prompt templates in [transfer-prompts.md](references/transfer-prompts.md): Departing Principal, Instruction Audit, Failure Archaeology, Executable Campaign, Fresh Verifier, Skill Library Review. Preserve the mechanism, not the aura: every kept rule needs a failure mode, trigger, changed behavior, proof surface, and strip condition.

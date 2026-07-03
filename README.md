@@ -35,6 +35,7 @@ fable-soul/
 │   └── transfer-prompts.md         # 6 prompt templates for turning experience into skills
 └── scripts/
     ├── sync_soul.py                # Sync rules to all install locations, detect drift
+    ├── check_update.py             # Compare local files against the upstream repo
     └── validate_skill.py           # Structural validation for the skill package
 ```
 
@@ -109,6 +110,7 @@ The rules live in **one** canonical file; everywhere else is a script-managed mi
 
 - `sync_soul.py` — copies the skill to `~/.claude/skills/` and `~/.codex/skills/`, and regenerates the global instruction files (`~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`) from canonical. `--check` reports drift without changing anything — wire it into CI or a shell alias.
 - **Safety guard**: the script will **not** overwrite a global file it didn't generate. If you already have your own `CLAUDE.md`, you get a skip warning, not a clobbered file.
+- `check_update.py` — compares your local copy against this repo's `main` branch and lists which files have upstream updates. Read-only; it never modifies anything. On first use, the skill offers to set up a **weekly automatic update check** for you (via cron, Task Scheduler, or your runner's scheduling feature) — it only creates the schedule if you say yes.
 - `validate_skill.py` — checks frontmatter, reference links, and package structure.
 
 ## Install
@@ -135,6 +137,8 @@ python scripts/sync_soul.py --check  # verify everything is in sync
 This makes the rules load in **every** session via your global instruction file. If you already have a `CLAUDE.md` / `AGENTS.md`, the script skips it — paste the body of `references/soul.md` (from the line `**Violating the letter...**` onward) into your existing file instead.
 
 **Other runners.** Any agent that reads Markdown instructions can use this: point it at `references/soul.md`, or paste the body into whatever global-instructions mechanism your runner has.
+
+**Staying up to date.** Run `python scripts/check_update.py` anytime to see whether upstream has changed, or accept the weekly scheduled check the skill offers on first use.
 
 ## Growing your own rules — the capture loop
 
