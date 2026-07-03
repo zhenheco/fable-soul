@@ -5,7 +5,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [1.0.1] - 2026-07-03
 
-New mechanisms curated from a review of community projects and discussion (FableCodex, fable-mode, and an r/ClaudeAI thread on distilling judgment into skills). Ideas were adopted as mechanisms and rewritten from scratch; no upstream text was copied. Every rule change went through the capture loop's RED-GREEN test before shipping — receipts in `references/evals.md`.
+New mechanisms added to the judgment layer. Every rule change went through the capture loop's RED-GREEN test before shipping — receipts in `references/evals.md`.
 
 ### Added
 
