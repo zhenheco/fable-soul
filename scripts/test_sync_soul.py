@@ -22,6 +22,8 @@ class SyncSoulTests(unittest.TestCase):
         self._orig_blocks = sync_soul.BLOCK_TARGETS
         self._orig_mirrors = sync_soul.SKILL_MIRRORS
         self._orig_hook = sync_soul.POST_SYNC_HOOK
+        self._orig_agents = sync_soul.AGENTS_MD
+        self._orig_link = sync_soul.CODEX_SKILL_LINK
         self.global_md = self.tmp / "CLAUDE-global.md"
         self.tail_md = self.tmp / "codex-tail.md"
         sync_soul.BLOCK_TARGETS = {
@@ -30,6 +32,8 @@ class SyncSoulTests(unittest.TestCase):
         }
         sync_soul.SKILL_MIRRORS = []
         sync_soul.POST_SYNC_HOOK = None
+        sync_soul.AGENTS_MD = None
+        sync_soul.CODEX_SKILL_LINK = self.tmp / "codex-link" / "fable-soul"
         self._orig_argv = sys.argv
         sys.argv = ["sync_soul.py"]
 
@@ -37,6 +41,8 @@ class SyncSoulTests(unittest.TestCase):
         sync_soul.BLOCK_TARGETS = self._orig_blocks
         sync_soul.SKILL_MIRRORS = self._orig_mirrors
         sync_soul.POST_SYNC_HOOK = self._orig_hook
+        sync_soul.AGENTS_MD = self._orig_agents
+        sync_soul.CODEX_SKILL_LINK = self._orig_link
         sys.argv = self._orig_argv
         self._tmp.cleanup()
 
@@ -104,6 +110,38 @@ class SyncSoulTests(unittest.TestCase):
         tail = self.tail_md.read_text(encoding="utf-8")
         self.assertIn("Reasoning Directives", tail)
         self.assertIn(sync_soul.BEGIN_MARK, tail)
+
+    def test_stale_agents_md_reported_in_check_mode(self) -> None:
+        self._seed()
+        sync_soul.main()  # blocks now current
+        stale = self.tmp / "AGENTS.md"
+        stale.write_text("# generated but missing soul blocks\n", encoding="utf-8")
+        sync_soul.AGENTS_MD = stale
+        sys.argv = ["sync_soul.py", "--check"]
+        with self.assertRaises(SystemExit):
+            sync_soul.main()
+
+    def test_dangling_codex_link_relinked(self) -> None:
+        self._seed()
+        mirror = self.tmp / "vault-skill"
+        sync_soul.SKILL_MIRRORS = [mirror]
+        link = sync_soul.CODEX_SKILL_LINK
+        link.parent.mkdir(parents=True)
+        link.symlink_to(self.tmp / "gone")  # dangling
+        sync_soul.main()
+        self.assertTrue(link.is_symlink())
+        self.assertEqual(link.resolve(), mirror.resolve())
+
+    def test_real_dir_at_codex_link_fails_loud(self) -> None:
+        self._seed()
+        mirror = self.tmp / "vault-skill"
+        sync_soul.SKILL_MIRRORS = [mirror]
+        link = sync_soul.CODEX_SKILL_LINK
+        link.mkdir(parents=True)  # old-layout full copy
+        (link / "stale.md").write_text("old", encoding="utf-8")
+        with self.assertRaises(SystemExit):
+            sync_soul.main()
+        self.assertTrue((link / "stale.md").exists())  # never deleted
 
 
 if __name__ == "__main__":

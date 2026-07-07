@@ -49,6 +49,8 @@ END_MARK = "<!-- fable-soul:end -->"
 
 # Regenerates ~/.codex/AGENTS.md from CLAUDE-global.md + codex-tail.md.
 POST_SYNC_HOOK: Optional[Path] = VAULT / "scripts" / "sync-codex.sh"
+# The generated file Codex actually reads; verified for freshness every run.
+AGENTS_MD: Optional[Path] = HOME / ".codex" / "AGENTS.md"
 
 
 def soul_body() -> str:
@@ -115,7 +117,17 @@ def inject_block(current: str, block: str) -> str:
     return current + sep + block
 
 
-def current_block(text: str) -> str | None:
+def agents_md_stale(expected_blocks: "list[str]") -> bool:
+    """True when the generated AGENTS.md is missing any current block."""
+    if AGENTS_MD is None:
+        return False
+    if not AGENTS_MD.exists():
+        return True
+    text = AGENTS_MD.read_text(encoding="utf-8")
+    return any(block not in text for block in expected_blocks)
+
+
+def current_block(text: str) -> "str | None":
     begin = text.find(BEGIN_MARK)
     if begin == -1:
         return None
@@ -204,11 +216,13 @@ def main() -> None:
             print(f"ok: {mirror}")
 
     changed_blocks = False
+    rendered_blocks: list[str] = []
     for target, render in BLOCK_TARGETS.items():
         if not target.exists():
             sys.exit(f"FAIL: {target} does not exist - wrong machine setup? "
                      f"(set CC_VAULT if the vault lives elsewhere)")
         block = render().rstrip("\n")
+        rendered_blocks.append(block)
         text = target.read_text(encoding="utf-8")
         existing = current_block(text)
         if existing == block:
@@ -217,21 +231,46 @@ def main() -> None:
         if check_only:
             problems.append(f"{target}: soul block missing or stale")
             continue
-        target.write_text(inject_block(text, block + "\n"), encoding="utf-8", newline="\n")
+        target.write_text(inject_block(text, block + "\n"), encoding="utf-8")
         changed_blocks = True
         print(f"injected block -> {target}")
 
-    if changed_blocks and POST_SYNC_HOOK is not None:
-        if POST_SYNC_HOOK.exists():
-            subprocess.run(["bash", str(POST_SYNC_HOOK)], check=True)
-            print(f"ran {POST_SYNC_HOOK} (regenerated ~/.codex/AGENTS.md)")
-        else:
-            print(f"WARN: {POST_SYNC_HOOK} not found - regenerate ~/.codex/AGENTS.md manually")
+    # The generated AGENTS.md can go stale even when the source blocks are
+    # current (deleted, hand-edited, or a previously failed hook run) - so
+    # freshness is verified every run, not only after an injection.
+    if changed_blocks or agents_md_stale(rendered_blocks):
+        if check_only:
+            problems.append(f"{AGENTS_MD}: stale or missing vs source blocks (run sync)")
+        elif POST_SYNC_HOOK is not None:
+            if POST_SYNC_HOOK.exists():
+                subprocess.run(["bash", str(POST_SYNC_HOOK)], check=True)
+                if agents_md_stale(rendered_blocks):
+                    sys.exit(f"FAIL: {AGENTS_MD} still stale after {POST_SYNC_HOOK}")
+                print(f"ran {POST_SYNC_HOOK} (regenerated {AGENTS_MD})")
+            else:
+                print(f"WARN: {POST_SYNC_HOOK} not found - regenerate {AGENTS_MD} manually")
 
-    if not check_only and CODEX_SKILL_LINK.parent.exists() and SKILL_MIRRORS:
-        if not CODEX_SKILL_LINK.exists():
-            CODEX_SKILL_LINK.symlink_to(SKILL_MIRRORS[0])
-            print(f"linked {CODEX_SKILL_LINK} -> {SKILL_MIRRORS[0]}")
+    if CODEX_SKILL_LINK.parent.exists() and SKILL_MIRRORS:
+        mirror = SKILL_MIRRORS[0]
+        if CODEX_SKILL_LINK.is_symlink():
+            if CODEX_SKILL_LINK.resolve() != mirror.resolve():
+                # wrong target or dangling (e.g. vault moved) - relink
+                if check_only:
+                    problems.append(f"{CODEX_SKILL_LINK}: symlink does not resolve to {mirror}")
+                else:
+                    CODEX_SKILL_LINK.unlink()
+                    CODEX_SKILL_LINK.symlink_to(mirror)
+                    print(f"relinked {CODEX_SKILL_LINK} -> {mirror}")
+        elif CODEX_SKILL_LINK.exists():
+            # real directory from the old upstream layout - no longer synced,
+            # so Codex would silently read stale files. Fail loud, never rm -rf.
+            problems.append(f"{CODEX_SKILL_LINK}: real directory (old layout) - "
+                            f"remove it manually, then re-run sync to create the symlink")
+        elif not check_only:
+            CODEX_SKILL_LINK.symlink_to(mirror)
+            print(f"linked {CODEX_SKILL_LINK} -> {mirror}")
+        else:
+            problems.append(f"{CODEX_SKILL_LINK}: missing (run sync)")
 
     if problems:
         print("\nDRIFT DETECTED:")
