@@ -3,6 +3,21 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-07-07
+
+Codex-only runtime directives: the AGENTS.md header now ships three documented workarounds for GPT-5.5 on Codex. They are header-level runtime fixes, not soul rules — each carries a named failure mode, proof surface, and strip condition in `references/maintenance.md`.
+
+### Added
+
+- **Anti-truncation directive** in the Codex AGENTS.md header: counters the reasoning cutoff observed on GPT-5.5 (community "candy test": reasoning capped at ~516 tokens; accuracy 20% → 80% with the directive injected).
+- **Agentic-persistence directive**: keeps Codex working until the task is resolved and verified instead of ending turns early — OpenAI's recommended persistence pattern for agentic workflows.
+- **Subagent-delegation directive** (distilled from lazycodex's Hephaestus discipline): fan out parallel explore subagents before non-trivial changes, delegate independent chunks, never trust a subagent's self-report. Requires `multi_agent = true` in `~/.codex/config.toml`.
+- Documentation for the Codex-only header block in `references/maintenance.md`, including per-directive strip conditions.
+
+### Changed
+
+- Nothing in the soul itself: `soul.md` and `soul-compact.md` are untouched. (Candidate rules from the same research round — mistake-recovery stance, tool-fit anti-subdivision — were RED-tested and did not reproduce a failure, so per the capture loop they did not ship.)
+
 ## [1.0.2] - 2026-07-03
 
 Cuts the always-on token cost by ~40% with no loss of function, verified by evals.
